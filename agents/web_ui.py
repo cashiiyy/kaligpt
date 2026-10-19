@@ -152,48 +152,113 @@ def execute_tool():
 # --- CHAT DISPATCHER ---
 
 def handle_ollama_chat(model: str, messages: list, system_prompt: str):
-    """Executes chat using Ollama or OpenAI-compatible local server."""
+    """Executes chat using Ollama or OpenAI-compatible local server with streaming to prevent timeout."""
     host = get_api_key("ollama") or "http://localhost:11434"
-    
-    # Check if OpenAI-compatible (like LM Studio)
-    is_openai_compat = False
-    try:
-        import requests
-        r = requests.get(f"{host.rstrip('/')}/v1/models", timeout=1.5)
-        if r.status_code == 200 and "data" in r.json():
-            is_openai_compat = True
-    except Exception:
-        pass
+    clean_host = host.rstrip("/")
+
+    # Detect OpenAI-compatible server (LM Studio port 1234 or /v1/models response)
+    is_openai_compat = ":1234" in clean_host
+    if not is_openai_compat:
+        try:
+            import requests
+            r = requests.get(f"{clean_host}/v1/models", timeout=3.0)
+            if r.status_code == 200 and "data" in r.json():
+                is_openai_compat = True
+        except Exception:
+            pass
 
     formatted_msgs = [{"role": "system", "content": system_prompt}] + messages
 
     if is_openai_compat:
         from openai import OpenAI
-        base_url = host.rstrip("/")
+        base_url = clean_host
         if not base_url.endswith("/v1"):
             base_url += "/v1"
-        client = OpenAI(base_url=base_url, api_key="lm-studio", timeout=120.0)
-        resp = client.chat.completions.create(
-            model=model,
-            messages=formatted_msgs,
-        )
-        content = resp.choices[0].message.content or ""
-        reasoning = getattr(resp.choices[0].message, "reasoning_content", None)
-        return {"response": content, "thinking": reasoning}
+
+        client = OpenAI(base_url=base_url, api_key="lm-studio", timeout=1800.0)
+
+        # Stream chunks to keep socket active and capture reasoning
+        try:
+            stream_resp = client.chat.completions.create(
+                model=model,
+                messages=formatted_msgs,
+                stream=True
+            )
+            content_parts = []
+            reasoning_parts = []
+            for chunk in stream_resp:
+                if not getattr(chunk, "choices", None):
+                    continue
+                delta = chunk.choices[0].delta
+                reasoning = getattr(delta, "reasoning_content", None)
+                if reasoning:
+                    reasoning_parts.append(reasoning)
+                content_delta = getattr(delta, "content", None)
+                if content_delta:
+                    content_parts.append(content_delta)
+
+            full_content = "".join(content_parts)
+            full_reasoning = "".join(reasoning_parts)
+            if not full_content and full_reasoning:
+                full_content = full_reasoning
+            return {"response": full_content, "thinking": full_reasoning or None}
+        except Exception:
+            # Fallback to standard non-streaming
+            resp = client.chat.completions.create(
+                model=model,
+                messages=formatted_msgs,
+                stream=False
+            )
+            choice = resp.choices[0]
+            content = choice.message.content or ""
+            reasoning = getattr(choice.message, "reasoning_content", None)
+            if not content and reasoning:
+                content = reasoning
+            return {"response": content, "thinking": reasoning}
     else:
         from ollama import Client
-        client = Client(host=host)
-        resp = client.chat(
-            model=model,
-            messages=formatted_msgs
-        )
-        content = resp["message"]["content"]
-        thinking = None
-        if "<think>" in content and "</think>" in content:
-            parts = content.split("</think>")
-            thinking = parts[0].replace("<think>", "").strip()
-            content = parts[1].strip()
-        return {"response": content, "thinking": thinking}
+        client = Client(host=clean_host, timeout=1800.0)
+        try:
+            stream_resp = client.chat(
+                model=model,
+                messages=formatted_msgs,
+                stream=True
+            )
+            content_parts = []
+            reasoning_parts = []
+            in_think = False
+            for chunk in stream_resp:
+                delta = chunk["message"]["content"]
+                if "<think>" in delta:
+                    in_think = True
+                    delta = delta.replace("<think>", "")
+                if "</think>" in delta:
+                    in_think = False
+                    parts = delta.split("</think>")
+                    reasoning_parts.append(parts[0])
+                    delta = parts[1] if len(parts) > 1 else ""
+                if in_think:
+                    reasoning_parts.append(delta)
+                else:
+                    content_parts.append(delta)
+
+            full_content = "".join(content_parts).strip()
+            full_reasoning = "".join(reasoning_parts).strip()
+            if not full_content and full_reasoning:
+                full_content = full_reasoning
+            return {"response": full_content, "thinking": full_reasoning or None}
+        except Exception:
+            resp = client.chat(
+                model=model,
+                messages=formatted_msgs
+            )
+            content = resp["message"]["content"]
+            thinking = None
+            if "<think>" in content and "</think>" in content:
+                parts = content.split("</think>")
+                thinking = parts[0].replace("<think>", "").strip()
+                content = parts[1].strip()
+            return {"response": content, "thinking": thinking}
 
 
 def handle_gemini_chat(model: str, messages: list, system_prompt: str):
@@ -206,8 +271,7 @@ def handle_gemini_chat(model: str, messages: list, system_prompt: str):
     from google.genai import types
 
     client = genai.Client(api_key=api_key)
-    
-    # Convert conversation turns to Content
+
     contents = []
     for m in messages:
         role = "user" if m.get("role") == "user" else "model"
@@ -236,7 +300,7 @@ def handle_chatgpt_chat(model: str, messages: list, system_prompt: str):
         raise ValueError("ChatGPT API key is not configured. Please set it in Config.")
 
     from openai import OpenAI
-    client = OpenAI(api_key=api_key)
+    client = OpenAI(api_key=api_key, timeout=300.0)
     formatted_msgs = [{"role": "system", "content": system_prompt}] + messages
 
     response = client.chat.completions.create(
@@ -256,7 +320,8 @@ def handle_openrouter_chat(model: str, messages: list, system_prompt: str):
     from openai import OpenAI
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
-        api_key=api_key
+        api_key=api_key,
+        timeout=300.0
     )
     formatted_msgs = [{"role": "system", "content": system_prompt}] + messages
 

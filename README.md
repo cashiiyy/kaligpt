@@ -54,6 +54,10 @@
 
 ## 🌐 Dynamic Web View (Hacker Terminal)
 
+<div align="center">
+  <img src="assets/kaligpt_dynamic_webview.png" alt="KaliGPT Dynamic Web View Interface" style="width:100%; max-width:900px; border-radius:8px; border:1px solid #00ff66;">
+</div>
+
 KaliGPT now features an **interactive, spacious dynamic web terminal** equipped with:
 - **Full Markdown Output Rendering:** Tables, lists, quotes, and syntax-highlighted code blocks with 1-click clipboard copy.
 - **Deep Reasoning & Thought Tracing:** Collapsible trace views for reasoning models (DeepSeek, Qwen, Think stages).
