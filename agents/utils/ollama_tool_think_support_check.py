@@ -6,7 +6,11 @@
 
 
 from ollama import Client
-from agent_configs import get_api_key
+
+try:
+    from .agent_configs import get_api_key
+except ImportError:
+    from agent_configs import get_api_key
 
 msg = [{"role": "user", "content": "Just say Hii"}]
 MODEL: str
@@ -42,20 +46,32 @@ def check_think_support():
 
 def model_support_check(model, api_url = get_api_key("ollama")):
     global client, MODEL, SUPPORT_STAGE
-    client = Client(host=api_url)
-    MODEL = model
+    try:
+        import requests
+        r = requests.get(f"{api_url}/v1/models", timeout=2)
+        if r.status_code == 200 and "data" in r.json():
+            SUPPORT_STAGE = 0
+            return SUPPORT_STAGE
+    except Exception:
+        pass
 
-    tool_support = check_tool_support()
-    think_support = check_think_support()
+    try:
+        client = Client(host=api_url)
+        MODEL = model
 
-    if tool_support and think_support:
-        SUPPORT_STAGE = 3  # supports tools & thinking
-    elif not think_support and tool_support:
-        SUPPORT_STAGE = 2  # supports tools
-    elif tool_support and not think_support:
-        SUPPORT_STAGE = 1  # supports thinking
-    else:
-        SUPPORT_STAGE = 0  # nothing supported
+        tool_support = check_tool_support()
+        think_support = check_think_support()
+
+        if tool_support and think_support:
+            SUPPORT_STAGE = 3  # supports tools & thinking
+        elif not think_support and tool_support:
+            SUPPORT_STAGE = 2  # supports tools
+        elif tool_support and not think_support:
+            SUPPORT_STAGE = 1  # supports thinking
+        else:
+            SUPPORT_STAGE = 0  # nothing supported
+    except Exception:
+        SUPPORT_STAGE = 0
 
     return SUPPORT_STAGE
 

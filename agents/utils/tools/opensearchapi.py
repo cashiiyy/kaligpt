@@ -4,9 +4,13 @@
 # SudoHopeX KaliGPT
 # Last updated: 9 fEB 2026
 
-
 import requests
-from newspaper import Article, Config
+
+try:
+    from newspaper import Article, Config
+except ImportError:
+    Article = None
+    Config = None
 
 
 # Define a realistic user agent
@@ -42,6 +46,9 @@ def parse_url_with_newspaper(url: str) -> str:
     :param url: the URL to parse
     :return: the content of the URL, main body only.
     """
+
+    if not Article or not Config:
+        return "Error: newspaper package not installed"
 
     # Configure the newspaper settings
     config = Config()

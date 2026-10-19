@@ -66,15 +66,34 @@ def interactive_select(title, text, options):
 
 def fetch_ollama_local_models():
     """
-    Fetch installed ollama models via local API
+    Fetch installed local models via Ollama API or OpenAI-compatible local API (e.g. LM Studio)
     """
     try:
         url = get_api_key("ollama")
-        r = requests.get(f"{url}/api/tags", timeout=3)
-        r.raise_for_status()
-        data = r.json()
+        if not url:
+            return []
 
-        return [m["name"] for m in data.get("models", [])]
+        # Try native Ollama endpoint
+        try:
+            r = requests.get(f"{url}/api/tags", timeout=3)
+            if r.status_code == 200:
+                data = r.json()
+                if "models" in data:
+                    return [m["name"] for m in data.get("models", [])]
+        except Exception:
+            pass
+
+        # Try OpenAI-compatible endpoint (LM Studio, vLLM, etc.)
+        try:
+            r = requests.get(f"{url}/v1/models", timeout=3)
+            if r.status_code == 200:
+                data = r.json()
+                if "data" in data:
+                    return [m["id"] for m in data.get("data", [])]
+        except Exception:
+            pass
+
+        return []
 
     except:
         return []

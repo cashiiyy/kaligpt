@@ -1,6 +1,6 @@
 {
-    "default_model": "gemini-2.5-flash",
-    "default_provider": "gemini",
+    "default_model": "qwen3.5-9b-uncensored-hauhaucs-aggressive",
+    "default_provider": "ollama",
     "gemini": {
         "api_key": "YOUR_GEMINI_API_KEY",
         "default_model": "gemini-2.5-flash",
@@ -27,9 +27,10 @@
         ]
     },
     "ollama": {
-        "api_key": "http://localhost:11434",
-        "default_model": "llama3",
+        "api_key": "http://localhost:1234",
+        "default_model": "qwen3.5-9b-uncensored-hauhaucs-aggressive",
         "models": [
+            "qwen3.5-9b-uncensored-hauhaucs-aggressive",
             "llama3",
             "llama3.1",
             "gpt-oss",

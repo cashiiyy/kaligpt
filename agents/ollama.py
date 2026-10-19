@@ -7,6 +7,13 @@
 
 import sys
 
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from ollama import Client
 
 from .utils.parse_n_print_response import parse_n_print_response
@@ -27,6 +34,55 @@ client: Client
 SUPPORT_STAGE: int
 
 
+class OpenAICompatClient:
+    def __init__(self, host):
+        from openai import OpenAI
+        base_url = host.rstrip("/")
+        if not base_url.endswith("/v1"):
+            base_url += "/v1"
+        self._client = OpenAI(base_url=base_url, api_key="lm-studio")
+
+    def chat(self, model, messages, tools=None, think=None):
+        api_messages = []
+        for m in messages:
+            role = m.get("role")
+            content = m.get("content", "")
+            if role in ("system", "user", "assistant"):
+                api_messages.append({"role": role, "content": content})
+            elif role == "tool":
+                api_messages.append({"role": "user", "content": f"[Tool Result]: {content}"})
+
+        kwargs = {
+            "model": model,
+            "messages": api_messages,
+        }
+        if tools:
+            kwargs["tools"] = tools
+
+        resp = self._client.chat.completions.create(**kwargs)
+        choice = resp.choices[0]
+
+        content = choice.message.content or ""
+        reasoning = getattr(choice.message, "reasoning_content", None)
+        if not content and reasoning:
+            content = reasoning
+        elif content and reasoning:
+            content = f"> [Thinking]\n> {reasoning}\n\n{content}"
+
+        tool_calls = choice.message.tool_calls or []
+
+        class Msg:
+            def __init__(self, c, tc):
+                self.content = c
+                self.tool_calls = tc
+
+        class Resp:
+            def __init__(self, m):
+                self.message = m
+
+        return Resp(Msg(content, tool_calls))
+
+
 def initialize_agent():
     global SUPPORT_STAGE, OLLAMA_API_URL
     global OLLAMA_MODEL
@@ -45,8 +101,20 @@ def initialize_configs():
 
         initialize_agent()
 
-        # initialize ollama AsyncClient
-        client = Client(host=OLLAMA_API_URL)
+        # initialize client (detect OpenAI-compatible server like LM Studio vs native Ollama)
+        is_openai_compat = False
+        try:
+            import requests
+            r = requests.get(f"{OLLAMA_API_URL}/v1/models", timeout=2)
+            if r.status_code == 200 and "data" in r.json():
+                is_openai_compat = True
+        except Exception:
+            pass
+
+        if is_openai_compat:
+            client = OpenAICompatClient(host=OLLAMA_API_URL)
+        else:
+            client = Client(host=OLLAMA_API_URL)
 
         tools = get_tools_info()
         TOOLS_INFO = [openai_tool_adapter(f) for f in tools]
@@ -56,7 +124,6 @@ def initialize_configs():
 
         # --- TOOL EXECUTION HELPER (Your Original Function) ---
         TOOL_FUNCTION_MAP = {func.__name__: func for func in tools} if tools else {}
-
 
     except Exception as e:
         print(f"Failed to initialize Ollama Agent: {e}\n[!] OLLAMA_API_URL may be misconfigured or unreachable.")
@@ -76,8 +143,14 @@ def execute_function_calls(function_calls):
     response_parts = []
 
     for call in function_calls:
-        func_name = call.function.name
-        func_args = dict(call.function.arguments)
+        if isinstance(call.function.arguments, str):
+            import json
+            try:
+                func_args = json.loads(call.function.arguments)
+            except Exception:
+                func_args = {}
+        else:
+            func_args = dict(call.function.arguments)
 
         print(f"\n[HackerX Tool Use] name: {func_name}, args: {func_args}")
 
