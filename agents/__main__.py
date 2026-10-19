@@ -52,6 +52,7 @@ MODES:
     -o  [--ollama]            =  use Ollama / Local Models (Offline, text & code)
     -or [--openrouter]        =  use OpenRouter Models (Online, text & code)
     -c  [--chatgpt]           =  use OpenAI Models (Online, text & code)
+    -w  [--webview]           =  Dynamic Web View / Web UI (Online & Offline)
     --web                     =  AIs official Web-Chat Opener (Online)
     --setup-keys              =  setup API keys for online models
     -h  [--help]              =  show this help message and exit
@@ -63,6 +64,7 @@ Model Management:
 
 Examples:
      kaligpt                  (uses default model and interactive prompt)
+     kaligpt --webview        (launches dynamic web view in browser)
      kaligpt "Help me find XSS on target.com"
      kaligpt -o "Analyze this log"
 """
@@ -73,6 +75,10 @@ def main(args):
     match args:
         case ["-h" | "--help", *_]:
             print(HELP_TEXT)
+            return
+
+        case ["-w" | "--webview" | "--web-ui", *rest]:
+            subprocess.run(["python", "-m", "agents.web_ui", *rest])
             return
 
         case ["-g" | "--gemini", *rest]:

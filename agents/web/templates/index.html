@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="emerald">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KaliGPT // Dynamic Web View (HackerX)</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+    
+    <!-- Highlight.js for Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Marked.js for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Hacker UI Stylesheet -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="hacker-body">
+    <!-- Ambient Background FX -->
+    <div class="ambient-glow glow-top"></div>
+    <div class="ambient-glow glow-bottom"></div>
+    <div class="cyber-grid-bg"></div>
+
+    <!-- Top Status & Launch Bar -->
+    <header class="hacker-topbar" id="topNav">
+        <div class="topbar-left">
+            <div class="brand-badge">
+                <span class="brand-pulse"></span>
+                <span class="brand-name">KALI<span class="accent-text">GPT</span></span>
+                <span class="brand-version">v1.3 // HACKERX</span>
+            </div>
+        </div>
+
+        <!-- Center AI Engine Controls -->
+        <div class="topbar-center">
+            <div class="control-pill">
+                <span class="pill-tag">ENGINE:</span>
+                <select id="providerSelect" class="cyber-select" aria-label="Select AI Provider">
+                    <option value="ollama">Ollama (Local / LM Studio)</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="chatgpt">OpenAI ChatGPT</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="litellm">LiteLLM Gateway</option>
+                </select>
+            </div>
+
+            <div class="control-pill">
+                <span class="pill-tag">MODEL:</span>
+                <select id="modelSelect" class="cyber-select" aria-label="Select AI Model">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+
+            <div class="control-pill">
+                <span class="pill-tag">PROFILE:</span>
+                <select id="presetSelect" class="cyber-select" aria-label="Select Agent Role Profile">
+                    <option value="web_bounty">Bug Bounty Specialist</option>
+                    <option value="pentest">Network & Web Pentester</option>
+                    <option value="code_audit">Security Code Auditor</option>
+                    <option value="osint">OSINT Recon Specialist</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Top Right Window Launchers & Actions -->
+        <div class="topbar-right">
+            <div class="theme-switcher" title="Cyber Glow Palette">
+                <button class="theme-dot emerald active" data-theme="emerald" title="Kali Emerald"></button>
+                <button class="theme-dot cyan" data-theme="cyan" title="Cyber Cyan"></button>
+                <button class="theme-dot purple" data-theme="purple" title="Ghost Purple"></button>
+            </div>
+
+            <button id="btnExportChat" class="topbar-btn" title="Export Session to Markdown">
+                <span class="btn-glyph">💾</span> EXPORT
+            </button>
+            <button id="btnClearChat" class="topbar-btn btn-danger" title="Clear Chat History">
+                <span class="btn-glyph">↺</span> CLEAR
+            </button>
+        </div>
+    </header>
+
+    <!-- Dynamic Desktop Workspace Canvas -->
+    <main class="desktop-workspace" id="desktopCanvas">
+        
+        <!-- WINDOW 1: Main Chat Terminal Window -->
+        <div class="cyber-window win-focused" id="winChat" style="top: 15px; left: 20px; width: calc(65% - 30px); height: calc(100% - 90px);">
+            <div class="window-header" data-drag-handle="true">
+                <div class="window-title">
+                    <span class="window-icon">🖥️</span>
+                    <span class="title-text">┌──(hackerx㉿kaligpt)-[~/workspace] // AGENTIC TERMINAL</span>
+                </div>
+                <div class="window-controls">
+                    <button class="win-btn btn-minimize" title="Minimize Window">_</button>
+                    <button class="win-btn btn-maximize" title="Maximize Window">▢</button>
+                    <button class="win-btn btn-close" title="Close Window">✕</button>
+                </div>
+            </div>
+            
+            <div class="window-content window-feed-content">
+                <div class="terminal-feed" id="chatFeed">
+                    <!-- Welcome Hero Banner -->
+                    <div class="terminal-hero" id="heroBanner">
+                        <div class="hero-topline">
+                            <span class="kali-user">┌──(operator㉿kaligpt)-[~/workspace]</span>
+                            <span class="session-badge">AUTONOMOUS SECURITY AGENT</span>
+                        </div>
+                        <div class="hero-prompt-line">
+                            <span class="kali-prompt">└─$</span> ./init_kaligpt.py --dynamic-windowing
+                        </div>
+                        <pre class="hero-ascii">
+ _  __     _ _  ____ ____ _____ 
+| |/ /__ _| (_)/ ___|  _ \_   _|
+| ' // _` | | | |  _| |_) || |  
+| . \ (_| | | | |_| |  __/ | |  
+|_|\_\__,_|_|_|\____|_|    |_|  v1.3 // HackerX Dynamic Windowed Workspace
+                        </pre>
+                        <div class="hero-features-bar">
+                            <div class="feat-box"><span class="feat-accent">✓</span> Dynamic Windowing System</div>
+                            <div class="feat-box"><span class="feat-accent">✓</span> Multi-Provider AI Core</div>
+                            <div class="feat-box"><span class="feat-accent">✓</span> 7 Security Tools Armed</div>
+                            <div class="feat-box"><span class="feat-accent">✓</span> Deep Thinking & Reasoning</div>
+                        </div>
+                        <div class="hero-instructions">
+                            Interact with KaliGPT via CLI commands or natural security instructions. Use floating windows for tools, monitor, and attack vectors.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terminal Command Input Bar -->
+                <div class="terminal-input-dock">
+                    <div class="dock-inner">
+                        <div class="cli-indicator">
+                            <span class="cli-user">operator@kaligpt</span>:<span class="cli-path">~</span>$
+                        </div>
+                        <textarea 
+                            id="userPrompt" 
+                            class="hacker-textarea" 
+                            rows="1" 
+                            placeholder="Enter security prompt, exploit query or command... (Shift + Enter for multiline)"
+                            autofocus
+                        ></textarea>
+                        <button id="btnSend" class="btn-execute" title="Execute Query (Enter)">
+                            <span class="execute-text">RUN</span>
+                            <span class="execute-glyph">↵</span>
+                        </button>
+                    </div>
+                    <div class="dock-meta">
+                        <span class="meta-left">Press <kbd>Enter</kbd> to run &bull; <kbd>Shift + Enter</kbd> for newline</span>
+                        <span class="meta-right" id="dockActiveBadge">Ollama // Local</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WINDOW 2: Security Tools Runner Window -->
+        <div class="cyber-window" id="winTools" style="top: 15px; right: 20px; width: 33%; height: 50%;">
+            <div class="window-header" data-drag-handle="true">
+                <div class="window-title">
+                    <span class="window-icon">⚡</span>
+                    <span class="title-text">KALI SECURITY TOOLS RUNNER</span>
+                </div>
+                <div class="window-controls">
+                    <button class="win-btn btn-minimize" title="Minimize Window">_</button>
+                    <button class="win-btn btn-maximize" title="Maximize Window">▢</button>
+                    <button class="win-btn btn-close" title="Close Window">✕</button>
+                </div>
+            </div>
+            
+            <div class="window-content window-scrollable">
+                <div class="form-row">
+                    <label for="toolSelect" class="form-label">ARMED SECURITY TOOL</label>
+                    <select id="toolSelect" class="cyber-select w-100">
+                        <!-- Populated via API -->
+                    </select>
+                    <div class="tool-doc-panel" id="toolDescription">Loading tool info...</div>
+                </div>
+
+                <div class="form-row">
+                    <label for="toolParamsInput" class="form-label">ARGUMENTS (JSON Object)</label>
+                    <textarea id="toolParamsInput" class="hacker-textarea font-mono w-100" rows="3"></textarea>
+                </div>
+
+                <button id="btnRunTool" class="btn-action w-100">
+                    <span class="btn-glyph">▶</span> EXECUTE SECURITY TOOL
+                </button>
+
+                <div class="result-panel hidden" id="toolResultBox">
+                    <div class="result-bar">
+                        <span>STDOUT / RETURNED PAYLOAD:</span>
+                        <button class="btn-mini-copy" id="btnCopyToolResult">Copy</button>
+                    </div>
+                    <pre><code class="language-json font-mono" id="toolResultPre"></code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- WINDOW 3: Target Attack Vectors & Payloads Window -->
+        <div class="cyber-window" id="winVectors" style="top: calc(50% + 25px); right: 20px; width: 33%; height: calc(50% - 100px);">
+            <div class="window-header" data-drag-handle="true">
+                <div class="window-title">
+                    <span class="window-icon">🎯</span>
+                    <span class="title-text">TARGET ATTACK VECTORS & PAYLOADS</span>
+                </div>
+                <div class="window-controls">
+                    <button class="win-btn btn-minimize" title="Minimize Window">_</button>
+                    <button class="win-btn btn-maximize" title="Maximize Window">▢</button>
+                    <button class="win-btn btn-close" title="Close Window">✕</button>
+                </div>
+            </div>
+            
+            <div class="window-content window-scrollable">
+                <div class="vector-list">
+                    <button class="hacker-chip" data-prompt="Analyze potential Web Bug Bounty attack vectors for https://target.com with focus on IDOR and business logic flaws.">
+                        <span class="chip-prefix">></span>
+                        <span class="chip-title">Web Bug Bounty Vectors</span>
+                    </button>
+                    <button class="hacker-chip" data-prompt="Perform passive OSINT reconnaissance and sub-domain enumeration strategies for target domain.">
+                        <span class="chip-prefix">></span>
+                        <span class="chip-title">OSINT Recon Strategy</span>
+                    </button>
+                    <button class="hacker-chip" data-prompt="Audit this code snippet for SQL Injection, XSS, and dangerous deserialization:&#10;&#10;```python&#10;# Paste code here&#10;```">
+                        <span class="chip-prefix">></span>
+                        <span class="chip-title">Security Code Audit</span>
+                    </button>
+                    <button class="hacker-chip" data-prompt="Generate practical Linux privilege escalation check steps and SUID binary exploitation one-liners.">
+                        <span class="chip-prefix">></span>
+                        <span class="chip-title">Linux PrivEsc Cheatsheet</span>
+                    </button>
+                    <button class="hacker-chip" data-prompt="Explain recent high-severity CVEs affecting OpenSSH / OpenSSL with proof-of-concept verification.">
+                        <span class="chip-prefix">></span>
+                        <span class="chip-title">CVE Advisory & PoC</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- WINDOW 4: System Telemetry & Monitor Window (Initially Hidden/Minimizable) -->
+        <div class="cyber-window hidden" id="winTelemetry" style="top: 80px; left: 100px; width: 420px; height: 380px;">
+            <div class="window-header" data-drag-handle="true">
+                <div class="window-title">
+                    <span class="window-icon">📊</span>
+                    <span class="title-text">SYSTEM TELEMETRY & HEALTH</span>
+                </div>
+                <div class="window-controls">
+                    <button class="win-btn btn-minimize" title="Minimize Window">_</button>
+                    <button class="win-btn btn-maximize" title="Maximize Window">▢</button>
+                    <button class="win-btn btn-close" title="Close Window">✕</button>
+                </div>
+            </div>
+            
+            <div class="window-content window-scrollable">
+                <div class="telemetry-panel">
+                    <div class="telemetry-row">
+                        <span class="tel-label">Active Provider:</span>
+                        <span class="tel-val accent-text" id="statProvider">OLLAMA</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="tel-label">Target Model:</span>
+                        <span class="tel-val text-cyan tel-truncate" id="statModel">--</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="tel-label">Endpoint Status:</span>
+                        <span class="tel-val" id="statKeyStatus">
+                            <span class="pulse-dot"></span> Ready
+                        </span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="tel-label">Security Tools Armed:</span>
+                        <span class="tel-val text-green" id="statTools">7 Ready</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="tel-label">Platform Architecture:</span>
+                        <span class="tel-val" id="statPlatform">x86_64</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-block mt-3">
+                    <div class="block-title">
+                        <span class="block-glyph">┌─[</span> ARMED SECURITY TOOLS LIST <span class="block-glyph">]</span>
+                    </div>
+                    <div class="tools-list" id="toolsListContainer">
+                        <div class="tool-entry" data-tool="keyword_search">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-label">keyword_search</span>
+                            <span class="tool-badge">RAG</span>
+                        </div>
+                        <div class="tool-entry" data-tool="search_as_RAG">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-label">search_as_RAG</span>
+                            <span class="tool-badge">Search</span>
+                        </div>
+                        <div class="tool-entry" data-tool="web_request_analysis">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-label">web_request_analysis</span>
+                            <span class="tool-badge">HTTP</span>
+                        </div>
+                        <div class="tool-entry" data-tool="execute_generic_linux_command">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-label">linux_cmd_exec</span>
+                            <span class="tool-badge">Shell</span>
+                        </div>
+                        <div class="tool-entry" data-tool="get_local_server_content">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-label">local_server_content</span>
+                            <span class="tool-badge">Local</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WINDOW 5: Configuration & API Key Vault Window (Initially Hidden) -->
+        <div class="cyber-window hidden" id="winConfig" style="top: 90px; left: 160px; width: 480px; height: 420px;">
+            <div class="window-header" data-drag-handle="true">
+                <div class="window-title">
+                    <span class="window-icon">⚙</span>
+                    <span class="title-text">PROVIDER CREDENTIALS & ENDPOINTS</span>
+                </div>
+                <div class="window-controls">
+                    <button class="win-btn btn-minimize" title="Minimize Window">_</button>
+                    <button class="win-btn btn-maximize" title="Maximize Window">▢</button>
+                    <button class="win-btn btn-close" title="Close Window">✕</button>
+                </div>
+            </div>
+            
+            <div class="window-content window-scrollable">
+                <div class="form-row">
+                    <label for="cfgVendor" class="form-label">PROVIDER</label>
+                    <select id="cfgVendor" class="cyber-select w-100">
+                        <option value="ollama">Ollama (Endpoint URL, e.g. http://localhost:11434)</option>
+                        <option value="gemini">Google Gemini (API Key)</option>
+                        <option value="chatgpt">OpenAI ChatGPT (API Key)</option>
+                        <option value="openrouter">OpenRouter (API Key)</option>
+                        <option value="litellm">LiteLLM (API Key)</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label for="cfgKey" class="form-label">API KEY / BASE URL</label>
+                    <input type="text" id="cfgKey" class="hacker-input font-mono w-100" placeholder="Key or http://localhost:11434">
+                    <span class="form-hint">Stored securely in <code>agents/utils/api.config.json</code></span>
+                </div>
+
+                <button id="btnSaveConfig" class="btn-action w-100">
+                    SAVE CREDENTIALS
+                </button>
+
+                <div id="cfgMessage" class="modal-alert hidden"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Desktop Taskbar / Dock for Dynamic Windows -->
+    <footer class="hacker-taskbar">
+        <div class="taskbar-windows">
+            <button class="taskbar-item active" data-window="winChat">
+                <span class="taskbar-icon">🖥️</span>
+                <span class="taskbar-label">Terminal</span>
+            </button>
+            <button class="taskbar-item active" data-window="winTools">
+                <span class="taskbar-icon">⚡</span>
+                <span class="taskbar-label">Security Tools</span>
+            </button>
+            <button class="taskbar-item active" data-window="winVectors">
+                <span class="taskbar-icon">🎯</span>
+                <span class="taskbar-label">Attack Vectors</span>
+            </button>
+            <button class="taskbar-item" data-window="winTelemetry">
+                <span class="taskbar-icon">📊</span>
+                <span class="taskbar-label">Telemetry</span>
+            </button>
+            <button class="taskbar-item" data-window="winConfig">
+                <span class="taskbar-icon">⚙</span>
+                <span class="taskbar-label">Config Vault</span>
+            </button>
+        </div>
+
+        <div class="taskbar-status">
+            <span class="taskbar-clock" id="taskbarClock">00:00:00</span>
+            <span class="taskbar-tag">DYNAMIC WINDOWS ACTIVE</span>
+        </div>
+    </footer>
+
+    <!-- Toast Notification Hub -->
+    <div class="hacker-toast-container" id="toastHub"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
