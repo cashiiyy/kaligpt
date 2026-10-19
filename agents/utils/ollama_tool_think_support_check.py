@@ -48,7 +48,8 @@ def model_support_check(model, api_url = get_api_key("ollama")):
     global client, MODEL, SUPPORT_STAGE
     try:
         import requests
-        r = requests.get(f"{api_url}/v1/models", timeout=2)
+        clean_url = api_url.rstrip("/")
+        r = requests.get(f"{clean_url}/v1/models", timeout=2)
         if r.status_code == 200 and "data" in r.json():
             SUPPORT_STAGE = 0
             return SUPPORT_STAGE
@@ -66,7 +67,7 @@ def model_support_check(model, api_url = get_api_key("ollama")):
             SUPPORT_STAGE = 3  # supports tools & thinking
         elif not think_support and tool_support:
             SUPPORT_STAGE = 2  # supports tools
-        elif tool_support and not think_support:
+        elif think_support and not tool_support:
             SUPPORT_STAGE = 1  # supports thinking
         else:
             SUPPORT_STAGE = 0  # nothing supported

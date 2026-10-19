@@ -40,7 +40,8 @@ class OpenAICompatClient:
         base_url = host.rstrip("/")
         if not base_url.endswith("/v1"):
             base_url += "/v1"
-        self._client = OpenAI(base_url=base_url, api_key="lm-studio")
+        self._client = OpenAI(base_url=base_url, api_key="lm-studio", timeout=1800.0)
+        self.streamed = False
 
     def chat(self, model, messages, tools=None, think=None):
         api_messages = []
@@ -59,17 +60,7 @@ class OpenAICompatClient:
         if tools:
             kwargs["tools"] = tools
 
-        resp = self._client.chat.completions.create(**kwargs)
-        choice = resp.choices[0]
-
-        content = choice.message.content or ""
-        reasoning = getattr(choice.message, "reasoning_content", None)
-        if not content and reasoning:
-            content = reasoning
-        elif content and reasoning:
-            content = f"> [Thinking]\n> {reasoning}\n\n{content}"
-
-        tool_calls = choice.message.tool_calls or []
+        self.streamed = False
 
         class Msg:
             def __init__(self, c, tc):
@@ -80,7 +71,86 @@ class OpenAICompatClient:
             def __init__(self, m):
                 self.message = m
 
-        return Resp(Msg(content, tool_calls))
+        try:
+            stream_resp = self._client.chat.completions.create(**kwargs, stream=True)
+            if hasattr(stream_resp, "choices") and not hasattr(stream_resp, "__iter__"):
+                choice = stream_resp.choices[0]
+                content = choice.message.content or ""
+                reasoning = getattr(choice.message, "reasoning_content", None)
+                if not content and reasoning:
+                    content = reasoning
+                elif content and reasoning:
+                    content = f"> [Thinking]\n> {reasoning}\n\n{content}"
+                tool_calls = getattr(choice.message, "tool_calls", None) or []
+                return Resp(Msg(content, tool_calls))
+        except Exception:
+            resp = self._client.chat.completions.create(**kwargs, stream=False)
+            choice = resp.choices[0]
+            content = choice.message.content or ""
+            reasoning = getattr(choice.message, "reasoning_content", None)
+            if not content and reasoning:
+                content = reasoning
+            elif content and reasoning:
+                content = f"> [Thinking]\n> {reasoning}\n\n{content}"
+            tool_calls = getattr(choice.message, "tool_calls", None) or []
+            return Resp(Msg(content, tool_calls))
+
+        content_parts = []
+        reasoning_parts = []
+        tool_calls_dict = {}
+        in_thinking = False
+
+        try:
+            for chunk in stream_resp:
+                if not getattr(chunk, "choices", None):
+                    continue
+                delta = chunk.choices[0].delta
+
+                reasoning = getattr(delta, "reasoning_content", None)
+                if reasoning:
+                    if not in_thinking:
+                        print("\n> [Thinking]\n> ", end="", flush=True)
+                        in_thinking = True
+                    print(reasoning.replace("\n", "\n> "), end="", flush=True)
+                    reasoning_parts.append(reasoning)
+
+                content_delta = getattr(delta, "content", None)
+                if content_delta:
+                    if in_thinking:
+                        print("\n\n", end="", flush=True)
+                        in_thinking = False
+                    print(content_delta, end="", flush=True)
+                    content_parts.append(content_delta)
+
+                tool_calls_chunk = getattr(delta, "tool_calls", None)
+                if tool_calls_chunk:
+                    for tc in tool_calls_chunk:
+                        idx = getattr(tc, "index", 0) or 0
+                        if idx not in tool_calls_dict:
+                            tool_calls_dict[idx] = tc
+                        else:
+                            if tc.function and tc.function.arguments:
+                                prev_args = tool_calls_dict[idx].function.arguments or ""
+                                tool_calls_dict[idx].function.arguments = prev_args + tc.function.arguments
+
+            self.streamed = True
+        except Exception as e:
+            if not content_parts and not reasoning_parts:
+                raise e
+
+        if in_thinking:
+            print("", flush=True)
+        print("", flush=True)
+
+        full_content = "".join(content_parts)
+        full_reasoning = "".join(reasoning_parts)
+        if not full_content and full_reasoning:
+            full_content = full_reasoning
+        elif full_content and full_reasoning:
+            full_content = f"> [Thinking]\n> {full_reasoning}\n\n{full_content}"
+
+        tool_calls = list(tool_calls_dict.values())
+        return Resp(Msg(full_content, tool_calls))
 
 
 def initialize_agent():
@@ -143,6 +213,7 @@ def execute_function_calls(function_calls):
     response_parts = []
 
     for call in function_calls:
+        func_name = getattr(call.function, "name", "")
         if isinstance(call.function.arguments, str):
             import json
             try:
@@ -273,6 +344,17 @@ def main(prompt=None):
             if prompt is None:
                 prompt = str(input("\nYou ➤ "))
 
+            prompt_clean = prompt.lower().strip()
+            if prompt_clean in ("-h", "--help", "help"):
+                from .__main__ import HELP_TEXT
+                print(HELP_TEXT)
+                prompt = None
+                continue
+
+            if prompt_clean in ("exit", "quit", "/exit", "/quit", "/bye"):
+                print("\n   Exiting HackerX. See you later!")
+                break
+
             if prompt.lower().replace("-", " ").strip() in AI_MANAGEMENT_OPTIONS:
                 agent_management(prompt.lower().replace("-", " ").strip())
                 initialize_agent()
@@ -285,7 +367,8 @@ def main(prompt=None):
                 tools=TOOLS_INFO
             )
 
-            parse_n_print_response(response)
+            if not getattr(client, "streamed", False):
+                parse_n_print_response(response)
             prompt = None
 
         except KeyboardInterrupt:
@@ -300,6 +383,10 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1:
         args = ' '.join(sys.argv[1:])
+        if args.strip() in ("-h", "--help", "help"):
+            from .__main__ import HELP_TEXT
+            print(HELP_TEXT)
+            sys.exit(0)
         main(args)
     else:
         main()
