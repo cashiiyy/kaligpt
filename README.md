@@ -2,13 +2,7 @@
 [//]: #  ( Updated: 2026 )
 
 
-<div align="center">
-  <a href="https://github.com/cashiiyy/kaligpt">
-    <img src="https://hope.is-a.dev/pages/project-docs/asset/hackerx-green-white-transparent.png" style="width:600px;height:auto;" alt="HackerX KaliGPT v1.3 - Developed by Kasinathan P S">
-  </a>
-</div>
-
-# HackerX ( KaliGPT v1.3 )
+# KaliGPT v1.3 
 **KaliGPT** : An Agentic assistance in Linux CLI and Dynamic Web View for Ethical Hacking & Cybersecurity to use AI with ease to learn and master CyberSecurity.
 
 ### **⭐ Star this repo if you found it helpful!**
@@ -18,9 +12,6 @@
 ## Badges
 <div align="center">
 
-<!-- GitHub Trending -->
-<a href="https://trendshift.io/repositories/36967?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-36967" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/36967" alt="SudoHopeX%2FKaliGPT | Trendshift" width="250" height="55"/></a>
----
  
 <!-- Repository Statistics -->
 [![Release](https://img.shields.io/github/v/tag/SudoHopeX/KaliGPT?label=Release&color=0078D4&style=for-the-badge&logo=github)](https://github.com/SudoHopeX/KaliGPT/tags)
